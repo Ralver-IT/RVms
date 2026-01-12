@@ -11,7 +11,7 @@ def sp_upload_async(file_path: str,
                     client_id: str = os.getenv("CLIENT_ID"),
                     client_secret: str = os.getenv("CLIENT_SECRET"),
                     sp_hostname: str = os.getenv("SHAREPOINT_HOSTNAME"),
-                    sp_site_path: str = os.getenv("SHAREPOINT_SITEPATH"),
+                    sp_site_path: str = os.getenv("SHAREPOINT_SITE_PATH"),
                     sp_library: str = os.getenv("SHAREPOINT_LIBRARY")):
     """
     Fire-and-forget SharePoint upload.
