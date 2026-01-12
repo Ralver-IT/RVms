@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="RVms",
-    version="0.1",
+    version="0.1.1",
     author="Ralph Verwijmeren",
     author_email="ralph@ralver.nl",
     description="Package for ms connections",

@@ -4,6 +4,8 @@ from .auth import SPConnection
 from .site import SharePointSite
 from .document import SharepointDocument
 from .exceptions import GraphError
+from ..utils import LocalFile
+
 import threading
 
 HOSTNAME = os.getenv("SHAREPOINT_HOSTNAME")
@@ -35,9 +37,8 @@ def sp_upload_async(file_path, folder):
             doc = SharepointDocument(site=st, library=LIBRARY_NAME)
 
             doc.upload(
-                path=folder,
-                file_path=file_path,
-                file_name=filename,
+                sp_path=folder,
+                file=LocalFile.from_path(file_path),
             )
 
             os.remove(file_path)
