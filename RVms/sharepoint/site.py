@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 
-from .auth import SPConnection
-from .exceptions import (
+from ..connection import GraphConnection
+from ..connection.exceptions import (
     GraphError,
     SharePointNotFoundError,
     translate_graph_error,
@@ -16,7 +16,7 @@ class SharePointSite:
     Represents a single SharePoint site (hostname + path) tied to a specificSPConnection.
 
     Example:
-        connection = SPConnection(...)
+        connection = GraphConnection(...)
         site = SharePointSite(
             connection=connection,
             hostname="domain.sharepoint.com",
@@ -24,7 +24,7 @@ class SharePointSite:
             default_library="Documents"
         )
     """
-    connection: SPConnection
+    connection: GraphConnection
     hostname: str
     site_path: str
     default_library: str = "Documents"

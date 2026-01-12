@@ -8,7 +8,7 @@ import requests
 
 from .site import SharePointSite
 from ..utils import LocalFile
-from .exceptions import (
+from RVms.connection.exceptions import (
     GraphError,
     SharePointPathError,
     SharePointNotFoundError,

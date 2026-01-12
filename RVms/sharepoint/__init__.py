@@ -1,9 +1,8 @@
 import os
 
-from .auth import SPConnection
 from .site import SharePointSite
 from .document import SharepointDocument
-from .exceptions import GraphError
+from ..connection import GraphConnection
 from ..utils import LocalFile
 
 import threading
@@ -20,7 +19,7 @@ def sp_upload_async(file_path, folder):
 
     def _worker():
         try:
-            conn = SPConnection(
+            conn = GraphConnection(
                 tenant_id=os.getenv("TENANT_ID"),
                 client_id=os.getenv("CLIENT_ID"),
                 client_secret=os.getenv("CLIENT_SECRET"),
@@ -33,7 +32,6 @@ def sp_upload_async(file_path, folder):
                 default_library=LIBRARY_NAME,
             )
 
-            filename = os.path.basename(file_path)
             doc = SharepointDocument(site=st, library=LIBRARY_NAME)
 
             doc.upload(

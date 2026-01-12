@@ -15,7 +15,7 @@ DEFAULT_GRAPH_BASE = "https://graph.microsoft.com/v1.0"
 
 
 @dataclass
-class SPConnection:
+class GraphConnection:
     """
     Represents a connection to Microsoft Graph using a single app registration
     (tenant_id + client_id + client_secret).
