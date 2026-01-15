@@ -489,7 +489,6 @@ class SharepointDocument:
             "Accept": "*/*"
         }
 
-        # IMPORTANT: don't follow redirects
         resp = requests.get(url, headers=headers, allow_redirects=False)
 
         # Must return redirect

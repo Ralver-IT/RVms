@@ -64,6 +64,8 @@ class GraphConnection:
             )
         return self._msal_app
 
+
+
     # ---------- token + graph request ---------- #
 
     def get_access_token(self) -> str:
@@ -136,3 +138,7 @@ class GraphConnection:
             return resp.json()
         except ValueError:
             return resp
+
+    def close(self) -> None:
+        if self._session:
+            self._session.close()
