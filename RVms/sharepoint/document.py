@@ -505,6 +505,40 @@ class SharepointDocument:
 
         return location
 
+    def get_preview_url(self) -> str:
+        """
+        Returns a short-lived embeddable preview URL for a DriveItem.
+        Use this for showing the file in an <iframe>/<object>, not for download.
+        """
+        if not self._item_id:
+            raise SharePointNotFoundError(
+                "File must be uploaded or loaded before calling get_preview_url()."
+            )
+
+        token = self.site.connection.get_access_token()
+        drive_id = self._ensure_drive_id()
+
+        url = f"{self.graph_base}/drives/{drive_id}/items/{self._item_id}/preview"
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        # Body is optional; you can add viewer options if you want.
+        resp = requests.post(url, headers=headers, json={})
+        if resp.status_code not in (200, 201):
+            raise SharePointNotFoundError(
+                f"Preview endpoint failed (status {resp.status_code}): {resp.text}"
+            )
+
+        data = resp.json()
+        preview_url = data.get("getUrl")
+        if not preview_url:
+            raise SharePointNotFoundError("No getUrl returned from preview endpoint.")
+
+        return preview_url
+
     def load_by_path(self, server_relative_url: str) -> None:
         """
         Initialize this SharepointDocument instance from an existing
