@@ -23,6 +23,10 @@ class Attachment:
         return self.raw.get("name", "") or ""
 
     @property
+    def content_type(self) -> str:
+        return self.raw.get("contentType", "") or ""
+
+    @property
     def size(self) -> int:
         return int(self.raw.get("size", 0) or 0)
 
