@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Sequence, Optional
 
 from .address import EmailAddress, emails_from_recip_list
 from .attachment import Attachment
@@ -32,7 +33,7 @@ class MailMessage:
         return bool(self.raw.get("hasAttachments", False))
 
     @property
-    def received_at(self):
+    def received_at(self) -> Optional[datetime]:
         return parse_graph_datetime(self.raw.get("receivedDateTime"))
 
     @property
@@ -47,6 +48,23 @@ class MailMessage:
     @property
     def cc(self) -> List[EmailAddress]:
         return emails_from_recip_list(self.raw.get("ccRecipients"))
+
+    @property
+    def body(self) -> Dict[str, Any]:
+        """Raw Graph body object: {'contentType': 'html'|'text', 'content': '...'}"""
+        return self.raw.get("body") or {}
+
+    @property
+    def body_preview(self) -> str:
+        return self.raw.get("bodyPreview", "") or ""
+
+    @property
+    def body_type(self) -> str:
+        return (self.body.get("contentType") or "").lower()
+
+    @property
+    def body_content(self) -> str:
+        return self.body.get("content") or ""
 
     # ---- active record ops ----
 
@@ -66,6 +84,14 @@ class MailMessage:
         url = self._client.user_url(self._user, f"/messages/{self.id}/move")
         raw = self._client.request("POST", url, json={"destinationId": destination_folder_id}, expected_status=201)
         return MailMessage(self._client, self._user, raw)
+
+    def load_body(self) -> "MailMessage":
+        if "body" not in self.raw:
+            msg = self.refresh(select=("body",))
+            body = msg.raw.get("body")
+            if body is not None:
+                self.raw["body"] = body
+        return self
 
     # ---- attachments ----
 
