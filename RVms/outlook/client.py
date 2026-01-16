@@ -112,7 +112,8 @@ class MailClient:
 
             headers = {}
             if search:
-                url += f"&$search={qs_encode(f'\"{search}\"')}"
+                quoted = f'"{search}"'
+                url += f"&$search={qs_encode(quoted)}"
                 headers["ConsistencyLevel"] = "eventual"
 
         page: Json = self.request("GET", url, headers=headers)
