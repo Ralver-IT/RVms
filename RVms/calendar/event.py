@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from .helpers import pretty_range
+
 Json = Dict[str, Any]
 
 
@@ -52,14 +54,16 @@ class CalendarEvent:
         return loc.get("displayName") or ""
 
     def to_widget_dict(self) -> Json:
-        """
-        Minimal payload for your Tabler widget.
-        """
+        start_iso = self.start
+        end_iso = self.end
+
         return {
             "id": self.id,
             "title": self.subject,
-            "start": self.start,
-            "end": self.end,
+            "start": start_iso,
+            "end": end_iso,
+            "range_pretty": pretty_range(start_iso, end_iso, tz_name=self.client.default_timezone)
+            if start_iso and end_iso else "",
             "location": self.location_name,
             "join_url": self.join_url,
             "web_link": self.web_link,
