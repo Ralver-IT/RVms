@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from .helpers import pretty_range
+from .helpers import pretty_range_local
 
 Json = Dict[str, Any]
 
@@ -62,7 +62,7 @@ class CalendarEvent:
             "title": self.subject,
             "start": start_iso,
             "end": end_iso,
-            "range_pretty": pretty_range(start_iso, end_iso, tz_name=self.client.default_timezone)
+            "range_pretty": pretty_range_local(start_iso, end_iso)
             if start_iso and end_iso else "",
             "location": self.location_name,
             "join_url": self.join_url,
