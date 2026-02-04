@@ -88,3 +88,48 @@ class SharePointSite:
                 f"Drive '{lib}' not found on site {self.hostname}{self.normalize_site_path()}. "
                 f"Available drives: {available}"
             )
+
+    def list_files(
+            self,
+            library_name: Optional[str] = None,
+            folder_item_id: Optional[str] = None,
+    ):
+        """
+        List all files in a document library (recursively).
+
+        :param library_name: SharePoint document library name
+        :param folder_item_id: Optional folder item ID to start from
+        :return: list of file metadata dicts
+        """
+        drive_id = self.get_drive_id(library_name)
+        token = self.connection.get_access_token()
+
+        if folder_item_id:
+            url = f"{self.graph_base}/drives/{drive_id}/items/{folder_item_id}/children"
+        else:
+            url = f"{self.graph_base}/drives/{drive_id}/root/children"
+
+        files = []
+
+        while url:
+            try:
+                data = self.connection.graph_request("GET", url, token=token)
+            except GraphError as e:
+                target = f"files in drive {drive_id}"
+                return translate_graph_error(target, e)
+
+            for item in data.get("value", []):
+                if "file" in item:
+                    files.append(item)
+                elif "folder" in item:
+                    # recurse into folder
+                    files.extend(
+                        self.list_files(
+                            library_name=library_name,
+                            folder_item_id=item["id"],
+                        )
+                    )
+
+            url = data.get("@odata.nextLink")
+
+        return files

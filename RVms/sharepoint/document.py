@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import requests
 
@@ -68,6 +68,18 @@ class SharepointDocument:
         Expose the underlying driveItem ID (if resolved).
         """
         return self._item_id
+
+    @property
+    def filename(self) -> Optional[str]:
+        """
+        Prefers Graph DriveItem 'name'
+        """
+        if self.file and isinstance(self.file, dict):
+            name = self.file.get("name")
+            if name:
+                return name
+
+        return None
 
 
     # ----- internal helpers -----
@@ -555,3 +567,47 @@ class SharepointDocument:
 
         # Resolve _item_id and _item_path using the existing helpers
         self._ensure_item_from_url()
+
+
+    @classmethod
+    def from_drive_item(
+            cls,
+            site: SharePointSite,
+            item: Dict,
+            library: Optional[str] = None,
+            drive_id: Optional[str] = None,
+    ) -> "SharepointDocument":
+        """
+        Build a SharepointDocument from a DriveItem JSON dict (as returned by Graph).
+        Works great with items from list_files().
+
+        - Sets _item_id and file immediately
+        - Sets _drive_id if provided (recommended)
+        - Tries to derive _item_path from parentReference.path + name if possible
+        - Attempts to derive server-relative url if we can parse site_path + library
+        """
+        doc = cls(site=site, library=library)
+
+        doc.file = item
+        doc._item_id = item["id"]
+
+        doc._drive_id = drive_id or item.get("parentReference", {}).get("driveId")
+
+        parent_path = item.get("parentReference", {}).get("path")  # "/drives/{id}/root:/A/B"
+        name = item.get("name")
+
+        item_path = None
+        if parent_path and name:
+            marker = "root:/"
+            if marker in parent_path:
+                rel = parent_path.split(marker, 1)[1]  # "A/B"
+                rel = rel.strip("/")
+                item_path = f"{rel}/{name}" if rel else name
+
+        doc._item_path = item_path
+
+        if item_path and doc.library_name:
+            doc.url = doc._server_relative_from_path(item_path)
+
+        return doc
+
