@@ -214,6 +214,47 @@ class SharepointDocument:
         site_path = self.site.site_path.lstrip("/")
         return f"/{site_path}/{self.library_name}/{item_path.strip('/')}"
 
+    def _build_item_path(self, sp_path: str, file_name: str) -> str:
+        """
+        Ensure the folder exists and return the normalized file path inside the drive.
+        """
+        folder = self.ensure_folder(sp_path)
+        return f"{folder}/{file_name}" if folder else file_name
+
+    def _create_upload_session(
+            self,
+            drive_id: str,
+            token: str,
+            item_path: str,
+            file_name: str,
+            conflict_behavior: str = "replace",
+    ) -> dict:
+        """
+        Create a Microsoft Graph upload session for a target file path.
+        """
+        create_session_url = (
+            f"{self.graph_base}/drives/{drive_id}/root:/{item_path}:/createUploadSession"
+        )
+        session_body = {
+            "item": {
+                "@microsoft.graph.conflictBehavior": conflict_behavior,
+                "name": file_name,
+            }
+        }
+
+        try:
+            return self.connection.graph_request(
+                "POST",
+                create_session_url,
+                token=token,
+                json=session_body,
+                expected_status=200,
+            )
+        except GraphError as e:
+            target = f"upload session for '{item_path}' in library '{self.library_name}'"
+            translate_graph_error(target, e)
+            raise
+
     def _upload_large_file_stream(
             self,
             drive_id: str,
@@ -232,21 +273,12 @@ class SharepointDocument:
         upload_url = None
 
         if upload_url is None:
-            create_session_url = (
-                f"{self.graph_base}/drives/{drive_id}/root:/{item_path}:/createUploadSession"
-            )
-            session_body = {
-                "item": {
-                    "@microsoft.graph.conflictBehavior": "replace",
-                    "name": file.name,
-                }
-            }
-            session = self.connection.graph_request(
-                "POST",
-                create_session_url,
+            session = self._create_upload_session(
+                drive_id=drive_id,
                 token=token,
-                json=session_body,
-                expected_status=200,
+                item_path=item_path,
+                file_name=file.name,
+                conflict_behavior="replace",
             )
             upload_url = session["uploadUrl"]
             bytes_uploaded = 0
@@ -332,9 +364,7 @@ class SharepointDocument:
         drive_id = self._ensure_drive_id()
         token = self.connection.get_access_token()
 
-        # Make sure folder exists in the document library
-        folder = self.ensure_folder(sp_path)
-        item_path = f"{folder}/{file.name}" if folder != "" else file.name
+        item_path = self._build_item_path(sp_path, file.name)
 
         small_file_threshold = 4 * 1024 * 1024  # 4 MiB
 
@@ -371,6 +401,52 @@ class SharepointDocument:
         self.url = self._server_relative_from_path(item_path)
 
         return self.url
+
+    def create_upload_session(
+            self,
+            sp_path: str,
+            file_name: str,
+            conflict_behavior: str = "replace",
+    ) -> dict:
+        """
+        Create a preauthenticated upload session that a client can use
+        to upload file bytes directly to SharePoint without extra auth.
+
+        Returns a small metadata payload with:
+        - upload_url: the preauthenticated Graph upload URL
+        - expires_at: when that URL expires
+        - item_path: the path inside the library
+        - server_relative_url: the final SharePoint-style path
+        - method: always PUT
+        - authorization_required: always False for the upload_url itself
+        """
+        if not file_name or not file_name.strip():
+            raise SharePointPathError("file_name is required to create an upload session.")
+
+        drive_id = self._ensure_drive_id()
+        token = self.connection.get_access_token()
+        normalized_name = Path(file_name).name
+        item_path = self._build_item_path(sp_path, normalized_name)
+
+        session = self._create_upload_session(
+            drive_id=drive_id,
+            token=token,
+            item_path=item_path,
+            file_name=normalized_name,
+            conflict_behavior=conflict_behavior,
+        )
+
+        self._item_path = item_path
+        self.url = self._server_relative_from_path(item_path)
+
+        return {
+            "upload_url": session["uploadUrl"],
+            "expires_at": session.get("expirationDateTime"),
+            "item_path": item_path,
+            "server_relative_url": self.url,
+            "method": "PUT",
+            "authorization_required": False,
+        }
 
     def download(self) -> bytes:
         """
